@@ -1,11 +1,14 @@
 package net.corda.core.node.services
 
 import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.contracts.*
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toStringShort
+import net.corda.core.schemas.MappedSchema
+import net.corda.core.schemas.QueryableState
 import net.corda.core.toFuture
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
@@ -14,6 +17,7 @@ import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
 import java.util.*
+import kotlin.reflect.KClass
 
 /**
  * Session ID to use for services listening for the first message in a session (before a
@@ -267,4 +271,34 @@ interface SchedulerService {
 
     /** Unschedule all activity for a TX output, probably because it was consumed. */
     fun unscheduleStateActivity(ref: StateRef)
+}
+
+/**
+ * A general purpose Persistence service for persisting State References of Contract State
+ */
+interface PersistenceService {
+
+    fun persistState(stateAndRef: StateAndRef<ContractState>)
+
+    fun persist(stateAndRefs: Set<StateAndRef<ContractState>>)
+
+    fun persistStateWithSchema(state: QueryableState, stateRef: StateRef, schema: MappedSchema)
+}
+
+class NonQueryableStateException(message: String) : Exception(message)
+
+/**
+ * A general purpose Query service for querying Contract State [MappedSchema] attributes
+ */
+interface QueryService {
+
+    fun simpleQueryForSchema(sqlString: String, schema: MappedSchema, vararg args: Any?): Iterable<Any?>
+
+    fun simpleQueryForSchemaUsingNamedArgs(sqlString: String, schema: MappedSchema, vararg args: String): Iterable<Any?>
+
+    fun nativeQueryForSchema(sqlString: String, schema: MappedSchema, vararg args: Any?): Iterable<Any?>
+
+    fun namedQueryForSchema(queryName: String, schema: MappedSchema, vararg args: Any?): Iterable<Any?>
+
+    fun <T : Persistable> criteriaQueryForSchema(schema: MappedSchema, entityClass: KClass<T>, vararg args: String?): List<T>
 }

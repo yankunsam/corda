@@ -60,6 +60,10 @@ open class MockServiceHubInternal(
         get() = flowFactory ?: throw UnsupportedOperationException()
     override val schemaService: SchemaService
         get() = schemas ?: throw UnsupportedOperationException()
+    override val persistenceService: PersistenceService
+        get() = throw UnsupportedOperationException()
+    override val queryService: QueryService
+        get() = throw UnsupportedOperationException()
 
     // We isolate the storage service with writable TXes so that it can't be accessed except via recordTransactions()
     private val txStorageService: TxWritableStorageService

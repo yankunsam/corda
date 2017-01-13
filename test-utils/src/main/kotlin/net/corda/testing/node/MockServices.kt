@@ -61,6 +61,8 @@ open class MockServices(val key: KeyPair = generateKeyPair()) : ServiceHub {
     override val networkMapCache: NetworkMapCache get() = throw UnsupportedOperationException()
     override val clock: Clock get() = throw UnsupportedOperationException()
     override val schedulerService: SchedulerService get() = throw UnsupportedOperationException()
+    override val persistenceService: PersistenceService get() = throw UnsupportedOperationException()
+    override val queryService: QueryService get() = throw UnsupportedOperationException()
     override val myInfo: NodeInfo get() = NodeInfo(object : SingleMessageRecipient {}, Party("MegaCorp", key.public.composite))
 }
 

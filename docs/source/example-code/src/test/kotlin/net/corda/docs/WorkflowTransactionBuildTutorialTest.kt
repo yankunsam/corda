@@ -1,5 +1,6 @@
 package net.corda.docs
 
+import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.contracts.LinearState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef

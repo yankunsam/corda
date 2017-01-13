@@ -41,6 +41,10 @@ sourceSets {
         }
     }
     main {
+        kotlin {
+            srcDir "${buildDir}/generated/source/kapt/main/"
+            srcDir "../finance-schemas/build/generated/source/kapt/main/"
+        }
         resources {
             srcDir "../config/dev"
         }
@@ -51,9 +55,14 @@ sourceSets {
 // build/reports/project/dependencies/index.html for green highlighted parts of the tree.
 
 dependencies {
+
     compile project(':finance')
+    compile project(':node-schemas')
     testCompile project(':test-utils')
     testCompile project(':client')
+
+    // requery
+    compile "io.requery:requery-kotlin:$requery_version"
 
     compile "com.google.code.findbugs:jsr305:3.0.1"
 

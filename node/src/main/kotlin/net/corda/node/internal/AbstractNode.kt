@@ -120,6 +120,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         override val keyManagementService: KeyManagementService get() = keyManagement
         override val identityService: IdentityService get() = identity
         override val schedulerService: SchedulerService get() = scheduler
+        override val persistenceService: PersistenceService get() = persistDb
+        override val queryService: QueryService get() = queryDb
         override val clock: Clock = platformClock
         override val myInfo: NodeInfo get() = info
         override val schemaService: SchemaService get() = schemas
@@ -154,6 +156,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     lateinit var info: NodeInfo
     lateinit var storage: TxWritableStorageService
     lateinit var checkpointStorage: CheckpointStorage
+    lateinit var persistDb: PersistenceService
+    lateinit var queryDb : QueryService
     lateinit var smm: StateMachineManager
     lateinit var vault: VaultService
     lateinit var keyManagement: KeyManagementService
