@@ -18,6 +18,7 @@ import net.corda.core.node.services.Vault
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.requirePermission
+import net.corda.node.services.messaging.rpcContext
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.StateMachineManager
@@ -100,7 +101,7 @@ class CordaRPCOpsImpl(
 
     // TODO: Check that this flow is annotated as being intended for RPC invocation
     override fun <T : Any> startFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T> {
-        requirePermission(startFlowPermission(logicType))
+        rpcContext.requirePermission(startFlowPermission(logicType))
         val stateMachine = services.invokeFlowAsync(logicType, *args) as FlowStateMachineImpl<T>
         return FlowHandle(
                 id = stateMachine.id,

@@ -13,9 +13,10 @@ buildscript {
     ext.kotlin_version = constants.getProperty("kotlinVersion")
     ext.quasar_version = '0.7.6'    // TODO: Upgrade to 0.7.7+ when Quasar bug 238 is resolved.
     ext.asm_version = '0.5.3'
-    ext.artemis_version = '1.5.3'
+    ext.artemis_version = '2.0.0'
+    ext.artemis_server_version = '2.1.0-SNAPSHOT'
     ext.jackson_version = '2.8.5'
-    ext.jetty_version = '9.3.9.v20160517'
+    ext.jetty_version = '9.4.0.M1'
     ext.jersey_version = '2.25'
     ext.jolokia_version = '2.0.0-M3'
     ext.assertj_version = '3.6.1'
@@ -25,7 +26,7 @@ buildscript {
     ext.guava_version = constants.getProperty("guavaVersion")
     ext.quickcheck_version = '0.7'
     ext.okhttp_version = '3.5.0'
-    ext.netty_version = '4.1.5.Final'
+    ext.netty_version = '4.1.6.Final'
     ext.typesafe_config_version = '1.3.1'
     ext.fileupload_version = '1.3.2'
     ext.junit_version = '4.12'

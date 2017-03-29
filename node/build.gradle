@@ -72,8 +72,8 @@ dependencies {
     compile "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
 
     // Artemis: for reliable p2p message queues.
-    compile "org.apache.activemq:artemis-server:${artemis_version}"
-    compile "org.apache.activemq:artemis-core-client:${artemis_version}"
+    compile "org.apache.activemq:artemis-server:${artemis_server_version}"
+    compile "org.apache.activemq:artemis-core-client:${artemis_server_version}"
     runtime "org.apache.activemq:artemis-amqp-protocol:${artemis_version}"
 
     // JAnsi: for drawing things to the terminal in nicely coloured ways.

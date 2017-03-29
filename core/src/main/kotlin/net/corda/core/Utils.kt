@@ -25,6 +25,7 @@ import java.nio.file.attribute.FileAttribute
 import java.time.Duration
 import java.time.temporal.Temporal
 import java.util.concurrent.*
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
 import java.util.function.BiConsumer
 import java.util.stream.Stream
@@ -124,6 +125,19 @@ fun <A> ListenableFuture<out A>.toObservable(): Observable<A> {
             subscriber.onCompleted()
         } failure {
             subscriber.onError(it)
+        }
+    }
+}
+
+fun <T> Observable<T>.pinInSubscriptions(hardReferenceStore: MutableSet<Observable<*>>): Observable<T> {
+    val refCount = AtomicInteger(0)
+    return this.doOnSubscribe {
+        if (refCount.getAndIncrement() == 0) {
+            require(hardReferenceStore.add(this)) { "Reference store already contained reference $this on add" }
+        }
+    }.doOnUnsubscribe {
+        if (refCount.decrementAndGet() == 0) {
+            require(hardReferenceStore.remove(this)) { "Reference store did not contain reference $this on remove" }
         }
     }
 }
@@ -253,6 +267,8 @@ class ThreadBox<out T>(val content: T, val lock: ReentrantLock = ReentrantLock()
         check(lock.isHeldByCurrentThread, { "Expected $lock to already be locked." })
         return body(content)
     }
+    /** Constructs a new ThreadBox that uses the same lock as the original. [R] should generally be a subset of [T] */
+    inline fun <R> project(projection: T.() -> R) = ThreadBox(projection(content), lock)
 
     fun checkNotLocked() = check(!lock.isHeldByCurrentThread)
 }
@@ -401,6 +417,8 @@ data class ErrorOr<out A> private constructor(val value: A?, val error: Throwabl
             ErrorOr.of(error)
         }
     }
+
+    fun mapError(function: (Throwable) -> Throwable) = ErrorOr(value, error?.let(function))
 }
 
 /**

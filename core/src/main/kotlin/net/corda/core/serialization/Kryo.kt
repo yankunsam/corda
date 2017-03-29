@@ -3,6 +3,7 @@ package net.corda.core.serialization
 import com.esotericsoftware.kryo.*
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
+import com.esotericsoftware.kryo.pool.KryoCallback
 import com.esotericsoftware.kryo.pool.KryoPool
 import com.esotericsoftware.kryo.serializers.JavaSerializer
 import com.esotericsoftware.kryo.util.MapReferenceResolver
@@ -12,10 +13,12 @@ import net.corda.core.crypto.*
 import net.corda.core.node.AttachmentsClassLoader
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.transactions.WireTransaction
+import net.corda.core.utilities.loggerFor
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
 import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
+import org.bouncycastle.crypto.tls.CipherType.stream
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.*
@@ -89,15 +92,46 @@ class SerializedBytes<T : Any>(bytes: ByteArray, val internalOnly: Boolean = fal
 private val KryoHeaderV0_1: OpaqueBytes = OpaqueBytes("corda\u0000\u0000\u0001".toByteArray())
 
 // Some extension functions that make deserialisation convenient and provide auto-casting of the result.
-fun <T : Any> ByteArray.deserialize(kryo: KryoPool = p2PKryo()): T {
-    Input(this).use {
-        val header = OpaqueBytes(it.readBytes(8))
-        if (header != KryoHeaderV0_1) {
-            throw KryoException("Serialized bytes header does not match any known format.")
+fun <T : Any> ByteArray.deserialize(kryoPool: KryoPool = p2PKryo()): T {
+    return kryoPool.run { kryo ->
+        Input(this).use { input ->
+            deserializeInput(kryo, input)
         }
-        @Suppress("UNCHECKED_CAST")
-        return kryo.run { k -> k.readClassAndObject(it) as T }
     }
+}
+
+/**
+ * Deserialises the bytes arriving on the InputStream and returns the leftover stream. Note that the leftover stream is
+ * not the same as the input stream!
+ *
+ * @param kryo the Kryo instance to use for deserialisation. This is deliberately *not* a pool because we need the
+ *     instance to store the context throughout stream deserialisation.
+ * @return A pair of (deserialised data, leftover stream)
+ */
+fun <T : Any> InputStream.deserialize(kryo: Kryo): Pair<T, InputStream> {
+    val input = Input(this)
+    val result = deserializeInput<T>(kryo, input)
+    val inputLeftoverStream = ByteArrayInputStream(input.buffer, input.position(), input.limit() - input.position())
+    return Pair(result, SequenceInputStream(inputLeftoverStream, this))
+}
+
+private fun <T : Any> deserializeInput(kryo: Kryo, input: Input): T {
+    val header = OpaqueBytes(input.readBytes(8))
+    if (header != KryoHeaderV0_1) {
+        throw KryoException("Serialized bytes header does not match any known format.")
+    }
+    @Suppress("UNCHECKED_CAST")
+    return kryo.readClassAndObject(input) as T
+}
+
+fun <T : Any> InputStream.deserializeAndSetLeftoverPossibly(kryoPool: KryoPool): T {
+    return kryoPool.run { kryo ->
+        val (result, leftover) = deserialize<T>(kryo)
+        val lazyStream = kryo.context.remove(InputStreamSerializer.InputStreamToReadKey) as LazilyInitialisedInputStream?
+        lazyStream?.initialise(leftover)
+        result
+    }
+
 }
 
 // TODO: The preferred usage is with a pool. Try and eliminate use of this from RPC.
@@ -143,11 +177,25 @@ fun <T : Any> T.serialize(kryo: KryoPool = p2PKryo(), internalOnly: Boolean = fa
 
 fun <T : Any> T.serialize(kryo: Kryo, internalOnly: Boolean = false): SerializedBytes<T> {
     val stream = ByteArrayOutputStream()
-    Output(stream).use {
-        it.writeBytes(KryoHeaderV0_1.bytes)
-        kryo.writeClassAndObject(it, this)
-    }
+    serializeToStream(kryo, stream)
     return SerializedBytes(stream.toByteArray(), internalOnly)
+}
+
+fun <T : Any> T.serializeToStream(kryo: Kryo, stream: OutputStream) {
+    val output = Output(stream)
+    try {
+        output.writeBytes(KryoHeaderV0_1.bytes)
+        kryo.writeClassAndObject(output, this)
+    } finally {
+        output.flush()
+    }
+}
+
+fun main(args: Array<String>) {
+
+    p2PKryo().run {
+        ByteArray(2000).serializeToStream(it, System.out)
+    }
 }
 
 /**
@@ -229,43 +277,108 @@ class ImmutableClassSerializer<T : Any>(val klass: KClass<T>) : Serializer<T>() 
     }
 }
 
+class LazilyInitialisedInputStream : InputStream() {
+    private var delegate: InputStream? = null
+    private fun checkInitialised(): InputStream {
+        return delegate ?: throw IllegalArgumentException("LazilyInitialisedInputStream not yet initialised")
+    }
+
+    fun initialise(delegate: InputStream) {
+        val previousDelegate = this.delegate
+        if (previousDelegate == null) {
+            this.delegate = delegate
+        } else {
+            throw IllegalArgumentException("LazilyInitialisedInputStream already initialised")
+        }
+    }
+
+    override fun skip(length: Long) = checkInitialised().skip(length)
+    override fun available() = checkInitialised().available()
+    override fun reset() = checkInitialised().reset()
+    override fun close() = checkInitialised().close()
+    override fun mark(readlimit: Int) = checkInitialised().mark(readlimit)
+    override fun markSupported() = checkInitialised().markSupported()
+    override fun read() = checkInitialised().read()
+    override fun read(byteArray: ByteArray?) = checkInitialised().read(byteArray)
+    override fun read(byteArray: ByteArray?, offset: Int, length: Int) = checkInitialised().read(byteArray, offset, length)
+}
+
 // TODO This is a temporary inefficient serialiser for sending InputStreams through RPC. This may be done much more
 // efficiently using Artemis's large message feature.
 object InputStreamSerializer : Serializer<InputStream>() {
+
+    object InputStreamToWriteKey
+    object InputStreamToReadKey
+
     override fun write(kryo: Kryo, output: Output, stream: InputStream) {
-        val buffer = ByteArray(4096)
-        while (true) {
-            val numberOfBytesRead = stream.read(buffer)
-            if (numberOfBytesRead != -1) {
-                output.writeInt(numberOfBytesRead, true)
-                output.writeBytes(buffer, 0, numberOfBytesRead)
-            } else {
-                output.writeInt(0)
-                break
-            }
+        if (kryo.context[InputStreamToWriteKey] == null) {
+            kryo.context.put(InputStreamToWriteKey, stream)
+        } else {
+            kryo.context.remove(InputStreamToWriteKey)
+            throw IllegalArgumentException("Can only serialise a single InputStream")
         }
     }
 
     override fun read(kryo: Kryo, input: Input, type: Class<InputStream>): InputStream {
-        val chunks = ArrayList<ByteArray>()
-        while (true) {
-            val chunk = input.readBytesWithLength()
-            if (chunk.isEmpty()) {
-                break
-            } else {
-                chunks.add(chunk)
-            }
+        if (kryo.context[InputStreamToReadKey] == null) {
+            val lazyStream = LazilyInitialisedInputStream()
+            kryo.context.put(InputStreamToReadKey, lazyStream)
+            return lazyStream
+        } else {
+            kryo.context.remove(InputStreamToReadKey)
+            throw IllegalArgumentException("Can only deserialise a single InputStream")
         }
-        val flattened = ByteArray(chunks.sumBy { it.size })
-        var offset = 0
-        for (chunk in chunks) {
-            System.arraycopy(chunk, 0, flattened, offset, chunk.size)
-            offset += chunk.size
-        }
-        return ByteArrayInputStream(flattened)
     }
-
 }
+
+//class InputStreamFromKryo(val input: Input) : InputStream() {
+//    // Invariants: !finished -> currentOffset <= currentChunk.size
+//    var currentChunk: ByteArray = input.readBytesWithLength()
+//    var currentOffset: Int = 0
+//    var finished = currentChunk.isEmpty()
+//
+//    // Postcondition: !finished -> currentOffset < currentChunk.size
+//    private fun getChunkIfNeeded() {
+//        if (!finished && currentOffset == currentChunk.size) {
+//            currentChunk = input.readBytesWithLength()
+//            println("$this Read chunk of size ${currentChunk.size}")
+//            currentOffset = 0
+//            if (currentChunk.isEmpty()) {
+//                finished = true
+//            }
+//        }
+//    }
+//
+//    override fun read(): Int {
+//        getChunkIfNeeded()
+//        if (finished) {
+//            return -1
+//        } else {
+//            val byte = currentChunk[currentOffset]
+//            currentOffset++
+//            return byte + 128
+//        }
+//    }
+//
+//    override fun available(): Int {
+//        if (finished) {
+//            return 0
+//        } else {
+//            return (currentChunk.size - currentOffset)
+//        }
+//    }
+//
+//    override fun read(byteArray: ByteArray, offset: Int, length: Int): Int {
+//        getChunkIfNeeded()
+//        if (finished) {
+//            return -1
+//        }
+//        val bytesRead = Math.min(available(), Math.min(length, byteArray.size - offset))
+//        System.arraycopy(byteArray, offset, currentChunk, currentOffset, bytesRead)
+//        currentOffset += bytesRead
+//        return bytesRead
+//    }
+//}
 
 inline fun <T> Kryo.useClassLoader(cl: ClassLoader, body: () -> T): T {
     val tmp = this.classLoader ?: ClassLoader.getSystemClassLoader()
@@ -582,5 +695,27 @@ object LoggerSerializer : Serializer<Logger>() {
 
     override fun read(kryo: Kryo, input: Input, type: Class<Logger>): Logger {
         return LoggerFactory.getLogger(input.readString())
+    }
+}
+
+class KryoPoolWithContext(val baseKryoPool: KryoPool, val contextKey: Any, val context: Any) : KryoPool {
+    override fun <T : Any?> run(callback: KryoCallback<T>): T {
+        val kryo = borrow()
+        try {
+            return callback.execute(kryo)
+        } finally {
+            release(kryo)
+        }
+    }
+
+    override fun borrow(): Kryo {
+        val kryo = baseKryoPool.borrow()
+        require(kryo.context.put(contextKey, context) == null) { "KryoPool already has context" }
+        return kryo
+    }
+
+    override fun release(kryo: Kryo) {
+        requireNotNull(kryo.context.remove(contextKey)) { "Kryo instance lost context while borrowed" }
+        baseKryoPool.release(kryo)
     }
 }

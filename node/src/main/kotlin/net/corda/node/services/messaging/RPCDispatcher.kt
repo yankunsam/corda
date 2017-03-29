@@ -144,7 +144,7 @@ abstract class RPCDispatcher(val ops: RPCOps, val userService: RPCUserService, v
             onExecutor.execute {
                 try {
                     val rpcMessage = msg.toRPCRequestMessage()
-                    CURRENT_RPC_USER.set(rpcMessage.user)
+//                    CURRENT_RPC_USER.set(rpcMessage.user)
                     dispatch(rpcMessage)
                 } catch(e: RPCException) {
                     rpcLog.warn("Received malformed client RPC message: ${e.message}")
@@ -152,7 +152,7 @@ abstract class RPCDispatcher(val ops: RPCOps, val userService: RPCUserService, v
                 } catch(e: Throwable) {
                     rpcLog.error("Uncaught exception when dispatching client RPC", e)
                 } finally {
-                    CURRENT_RPC_USER.remove()
+//                    CURRENT_RPC_USER.remove()
                 }
             }
         }

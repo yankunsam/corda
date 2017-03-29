@@ -206,12 +206,11 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
     var shutdownHook: Thread? = null
     try {
         driverDsl.start()
-        val returnValue = dsl(coerce(driverDsl))
         shutdownHook = Thread({
             driverDsl.shutdown()
         })
         Runtime.getRuntime().addShutdownHook(shutdownHook)
-        return returnValue
+        return dsl(coerce(driverDsl))
     } catch (exception: Throwable) {
         println("Driver shutting down because of exception $exception")
         exception.printStackTrace()
@@ -312,6 +311,7 @@ class ShutdownManager(private val executorService: ExecutorService) {
             registeredShutdowns.add(shutdown)
         }
     }
+    fun registerShutdown(shutdown: () -> Unit) = registerShutdown(Futures.immediateFuture(shutdown))
 
     fun registerProcessShutdown(processFuture: ListenableFuture<Process>) {
         val processShutdown = processFuture.map { process ->
@@ -345,7 +345,9 @@ class DriverDSL(
 ) : DriverDSLInternalInterface {
     private val networkMapLegalName = DUMMY_MAP.name
     private val networkMapAddress = portAllocation.nextHostAndPort()
-    val executorService: ListeningScheduledExecutorService = MoreExecutors.listeningDecorator(Executors.newScheduledThreadPool(2))
+    val executorService: ListeningScheduledExecutorService = MoreExecutors.listeningDecorator(
+            Executors.newScheduledThreadPool(2, ThreadFactoryBuilder().setNameFormat("driver-pool-thread-%d").build())
+    )
     val shutdownManager = ShutdownManager(executorService)
 
     class State {
