@@ -67,6 +67,7 @@ publishing {
 }
 
 task generateNotaryIdentity(type: JavaExec) {
+    group = "corda demo"
     classpath = sourceSets.main.runtimeClasspath
     main = "net.corda.node.utilities.ServiceIdentityGeneratorKt"
     def nodeDirs = ["$deployTo/Notary1", "$deployTo/Notary2", "$deployTo/Notary3"].join(",")
@@ -74,6 +75,7 @@ task generateNotaryIdentity(type: JavaExec) {
 }
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build', 'generateNotaryIdentity']) {
+    group = "corda demo"
     directory deployTo
     networkMap "Notary 1"
     node {
@@ -128,6 +130,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build', 'generat
 }
 
 task notarise(type: JavaExec) {
+    group = "corda demo"
     classpath = sourceSets.main.runtimeClasspath
     main = 'net.corda.notarydemo.NotaryDemoKt'
 }

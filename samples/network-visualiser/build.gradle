@@ -38,6 +38,7 @@ idea {
 mainClassName = 'net.corda.netmap.NetworkMapVisualiser'
 
 task deployVisualiser(type: FatCapsule) {
+    group = "corda demo"
     applicationClass 'net.corda.netmap.NetworkMapVisualiser'
     reallyExecutable
     capsuleManifest {

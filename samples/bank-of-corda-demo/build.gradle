@@ -49,6 +49,7 @@ dependencies {
 }
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
+    group = "corda demo"
     directory "./build/nodes"
     // This name "Notary" is hard-coded into BankOfCordaClientApi so if you change it here, change it there too.
     // In this demo the node that runs a standalone notary also acts as the network map server.
@@ -117,6 +118,7 @@ publishing {
 }
 
 task runIssuer(type: JavaExec) {
+    group = "corda demo"
     classpath = sourceSets.main.runtimeClasspath
     main = 'net.corda.bank.BankOfCordaDriverKt'
     args '--role'
@@ -124,6 +126,7 @@ task runIssuer(type: JavaExec) {
 }
 
 task runRPCCashIssue(type: JavaExec) {
+    group = "corda demo"
     classpath = sourceSets.main.runtimeClasspath
     main = 'net.corda.bank.BankOfCordaDriverKt'
     args '--role'
@@ -135,6 +138,7 @@ task runRPCCashIssue(type: JavaExec) {
 }
 
 task runWebCashIssue(type: JavaExec) {
+    group = "corda demo"
     classpath = sourceSets.main.runtimeClasspath
     main = 'net.corda.bank.BankOfCordaDriverKt'
     args '--role'

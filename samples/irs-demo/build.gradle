@@ -55,6 +55,7 @@ dependencies {
 }
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
+    group = "corda demo"
     directory "./build/nodes"
     networkMap "Notary"
     node {
@@ -87,6 +88,15 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
         cordapps = []
         useTestClock true
     }
+}
+
+task runnodes(type: JavaExec , dependsOn: ['deployNodes']) {
+    group = "corda demo"
+    classpath = files('./build/nodes/runnodes.jar')
+    classpath += sourceSets.main.runtimeClasspath
+    workingDir = './build/nodes'
+    main = 'net.corda.plugins.NodeRunnerKt'
+    args '--headless'
 }
 
 task integrationTest(type: Test, dependsOn: []) {

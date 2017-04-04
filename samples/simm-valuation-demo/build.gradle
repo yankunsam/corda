@@ -66,6 +66,7 @@ dependencies {
 }
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
+    group = "corda demo"
     directory "./build/nodes"
     networkMap "Controller"
     node {
@@ -107,6 +108,7 @@ task integrationTest(type: Test, dependsOn: []) {
 }
 
 task npmInstall(type: Exec) {
+    group = "corda demo"
     workingDir 'src/main/web'
     if (System.getProperty('os.name').toLowerCase().contains('windows')) {
         commandLine 'cmd', '/c', 'npm', 'install'

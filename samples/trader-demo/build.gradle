@@ -59,6 +59,7 @@ dependencies {
 }
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
+    group = "corda demo"
     ext.rpcUsers = [['user': "demo", 'password': "demo", 'permissions': [
             'StartFlow.net.corda.flows.IssuerFlow$IssuanceRequester',
             "StartFlow.net.corda.traderdemo.flow.SellerFlow"
@@ -127,6 +128,7 @@ publishing {
 }
 
 task runBuyer(type: JavaExec) {
+    group = "corda demo"
     classpath = sourceSets.main.runtimeClasspath
     main = 'net.corda.traderdemo.TraderDemoKt'
     args '--role'
@@ -134,6 +136,7 @@ task runBuyer(type: JavaExec) {
 }
 
 task runSeller(type: JavaExec) {
+    group = "corda demo"
     classpath = sourceSets.main.runtimeClasspath
     main = 'net.corda.traderdemo.TraderDemoKt'
     args '--role'

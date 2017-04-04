@@ -52,14 +52,15 @@ dependencies {
 }
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
-    ext.rpcUsers = [ ['user' : "demo", 'password' : "demo", 'permissions' : ["StartFlow.net.corda.flows.FinalityFlow"]] ]
+    group = "corda demo"
+    ext.rpcUsers = [['user': "demo", 'password': "demo", 'permissions': ["StartFlow.net.corda.flows.FinalityFlow"]]]
 
     directory "./build/nodes"
     networkMap "Controller"
     node {
         name "Controller"
         nearestCity "London"
-        advertisedServices ["corda.notary.validating"]
+        advertisedServices["corda.notary.validating"]
         p2pPort 10002
         rpcPort 10003
         cordapps = []
@@ -109,7 +110,17 @@ publishing {
     }
 }
 
+task runnodes(type: JavaExec , dependsOn: ['deployNodes']) {
+    group = "corda demo"
+    classpath = files('./build/nodes/runnodes.jar')
+    classpath += sourceSets.main.runtimeClasspath
+    workingDir = './build/nodes'
+    main = 'net.corda.plugins.NodeRunnerKt'
+    args '--headless'
+}
+
 task runSender(type: JavaExec) {
+    group = "corda demo"
     classpath = sourceSets.main.runtimeClasspath
     main = 'net.corda.attachmentdemo.AttachmentDemoKt'
     args '--role'
@@ -117,6 +128,7 @@ task runSender(type: JavaExec) {
 }
 
 task runRecipient(type: JavaExec) {
+    group = "corda demo"
     classpath = sourceSets.main.runtimeClasspath
     main = 'net.corda.attachmentdemo.AttachmentDemoKt'
     args '--role'
