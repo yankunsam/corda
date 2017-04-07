@@ -1,8 +1,12 @@
 package net.corda.demobench.model
 
+import com.fasterxml.jackson.annotation.JsonInclude
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.SerializationFeature
 import com.google.common.net.HostAndPort
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigValueFactory
+import net.corda.core.crypto.X509Utilities
 import net.corda.core.div
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.node.internal.NetworkMapInfo
@@ -11,39 +15,44 @@ import net.corda.nodeapi.User
 import net.corda.nodeapi.config.parseAs
 import net.corda.webserver.WebServerConfig
 import org.junit.Test
+import org.bouncycastle.asn1.x500.X500Name
 import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import java.io.StringWriter
+
+
 
 class NodeConfigTest {
 
     private val baseDir: Path = Paths.get(".").toAbsolutePath()
+    private val myLegalName = X509Utilities.getDevX509Name("My Name")
 
     @Test
     fun `test name`() {
-        val config = createConfig(legalName = "My Name")
-        assertEquals("My Name", config.legalName)
+        val config = createConfig(legalName = myLegalName)
+        assertEquals(myLegalName, config.legalName)
         assertEquals("myname", config.key)
     }
 
     @Test
     fun `test node directory`() {
-        val config = createConfig(legalName = "My Name")
+        val config = createConfig(legalName = myLegalName)
         assertEquals(baseDir / "myname", config.nodeDir)
     }
 
     @Test
     fun `test explorer directory`() {
-        val config = createConfig(legalName = "My Name")
+        val config = createConfig(legalName = myLegalName)
         assertEquals(baseDir / "myname-explorer", config.explorerDir)
     }
 
     @Test
     fun `test plugin directory`() {
-        val config = createConfig(legalName = "My Name")
+        val config = createConfig(legalName = myLegalName)
         assertEquals(baseDir / "myname" / "plugins", config.pluginDir)
     }
 
@@ -114,10 +123,23 @@ class NodeConfigTest {
         assertFalse(config.isCashIssuer)
     }
 
+    /**
+     * Reformat JSON via Jackson to ensure a consistent format for comparison purposes.
+     */
+    private fun prettyPrint(content: String): String {
+        val mapper = ObjectMapper()
+        mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL)
+        mapper.enable(SerializationFeature.INDENT_OUTPUT)
+        val sw = StringWriter()
+        val parsed = mapper.readTree(content)
+        mapper.writeValue(sw, parsed)
+        return sw.toString()
+    }
+
     @Test
     fun `test config text`() {
         val config = createConfig(
-                legalName = "My Name",
+                legalName = myLegalName,
                 nearestCity = "Stockholm",
                 p2pPort = 10001,
                 rpcPort = 40002,
@@ -126,25 +148,27 @@ class NodeConfigTest {
                 services = listOf("my.service"),
                 users = listOf(user("jenny"))
         )
-        assertEquals("{"
-                + "\"extraAdvertisedServiceIds\":[\"my.service\"],"
-                + "\"h2port\":30001,"
-                + "\"myLegalName\":\"MyName\","
-                + "\"nearestCity\":\"Stockholm\","
-                + "\"p2pAddress\":\"localhost:10001\","
-                + "\"rpcAddress\":\"localhost:40002\","
-                + "\"rpcUsers\":["
-                + "{\"password\":\"letmein\",\"permissions\":[\"ALL\"],\"username\":\"jenny\"}"
-                + "],"
-                + "\"useTestClock\":true,"
-                + "\"webAddress\":\"localhost:20001\""
-                + "}", config.toText().stripWhitespace())
+        val expected = ("{"
+            + "\"extraAdvertisedServiceIds\":[\"my.service\"],"
+            + "\"h2port\":30001,"
+            + "\"myLegalName\":\"${myLegalName}\","
+            + "\"nearestCity\":\"Stockholm\","
+            + "\"p2pAddress\":\"localhost:10001\","
+            + "\"rpcAddress\":\"localhost:40002\","
+            + "\"rpcUsers\":["
+            + "{\"password\":\"letmein\",\"permissions\":[\"ALL\"],\"username\":\"jenny\"}"
+            + "],"
+            + "\"useTestClock\":true,"
+            + "\"webAddress\":\"localhost:20001\""
+            + "}")
+        val actual = config.toText()
+        assertEquals(prettyPrint(expected), prettyPrint(actual))
     }
 
     @Test
     fun `test config text with network map`() {
         val config = createConfig(
-                legalName = "My Name",
+                legalName = myLegalName,
                 nearestCity = "Stockholm",
                 p2pPort = 10001,
                 rpcPort = 40002,
@@ -155,12 +179,12 @@ class NodeConfigTest {
         )
         config.networkMap = NetworkMapConfig(DUMMY_NOTARY.name, 12345)
 
-        assertEquals("{"
+        val expected = ("{"
                 + "\"extraAdvertisedServiceIds\":[\"my.service\"],"
                 + "\"h2port\":30001,"
-                + "\"myLegalName\":\"MyName\","
+                + "\"myLegalName\":\"${myLegalName}\","
                 + "\"nearestCity\":\"Stockholm\","
-                + "\"networkMapService\":{\"address\":\"localhost:12345\",\"legalName\":\"CN=NotaryService,O=R3,OU=corda,L=London,C=UK\"},"
+                + "\"networkMapService\":{\"address\":\"localhost:12345\",\"legalName\":\"${DUMMY_NOTARY.name}\"},"
                 + "\"p2pAddress\":\"localhost:10001\","
                 + "\"rpcAddress\":\"localhost:40002\","
                 + "\"rpcUsers\":["
@@ -168,13 +192,15 @@ class NodeConfigTest {
                 + "],"
                 + "\"useTestClock\":true,"
                 + "\"webAddress\":\"localhost:20001\""
-                + "}", config.toText().stripWhitespace())
+                + "}")
+        val actual = config.toText()
+        assertEquals(prettyPrint(expected), prettyPrint(actual))
     }
 
     @Test
     fun `reading node configuration`() {
         val config = createConfig(
-                legalName = "My Name",
+                legalName = myLegalName,
                 nearestCity = "Stockholm",
                 p2pPort = 10001,
                 rpcPort = 40002,
@@ -191,7 +217,7 @@ class NodeConfigTest {
                 .resolve()
         val fullConfig = nodeConfig.parseAs<FullNodeConfiguration>()
 
-        assertEquals("My Name", fullConfig.myLegalName)
+        assertEquals(myLegalName, fullConfig.myLegalName)
         assertEquals("Stockholm", fullConfig.nearestCity)
         assertEquals(localPort(40002), fullConfig.rpcAddress)
         assertEquals(localPort(10001), fullConfig.p2pAddress)
@@ -205,7 +231,7 @@ class NodeConfigTest {
     @Test
     fun `reading webserver configuration`() {
         val config = createConfig(
-                legalName = "My Name",
+                legalName = myLegalName,
                 nearestCity = "Stockholm",
                 p2pPort = 10001,
                 rpcPort = 40002,
@@ -230,7 +256,7 @@ class NodeConfigTest {
 
     @Test
     fun `test moving`() {
-        val config = createConfig(legalName = "My Name")
+        val config = createConfig(legalName = myLegalName)
 
         val elsewhere = baseDir / "elsewhere"
         val moved = config.moveTo(elsewhere)
@@ -240,7 +266,7 @@ class NodeConfigTest {
     }
 
     private fun createConfig(
-            legalName: String = "Unknown",
+            legalName: X500Name = X509Utilities.getDevX509Name("Unknown"),
             nearestCity: String = "Nowhere",
             p2pPort: Int = -1,
             rpcPort: Int = -1,

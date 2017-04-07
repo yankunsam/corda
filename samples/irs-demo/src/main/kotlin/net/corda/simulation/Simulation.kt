@@ -25,6 +25,7 @@ import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.TestClock
 import net.corda.testing.node.setTo
+import org.bouncycastle.asn1.x500.X500Name
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.math.BigInteger
@@ -71,7 +72,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
             val cfg = TestNodeConfiguration(
                     baseDirectory = config.baseDirectory,
                     // TODO: Set this back to "Bank of $city" after video day.
-                    myLegalName = "CN=Bank $letter,O=Bank $letter,L=city",
+                    myLegalName = X500Name("CN=Bank $letter,O=Bank $letter,L=${city}"),
                     nearestCity = city,
                     networkMapService = null)
             return SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot)
@@ -116,14 +117,16 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     }
 
     object RatesOracleFactory : MockNetwork.Factory {
+        // TODO: Make a more realistic legal name
+        val RATES_SERVICE_NAME = X500Name("CN=Rates Service Provider,O=R3,OU=corda,L=Madrid,C=Spain")
+
         override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
                             advertisedServices: Set<ServiceInfo>, id: Int, overrideServices: Map<ServiceInfo, KeyPair>?,
                             entropyRoot: BigInteger): MockNetwork.MockNode {
             require(advertisedServices.containsType(NodeInterestRates.type))
             val cfg = TestNodeConfiguration(
                     baseDirectory = config.baseDirectory,
-                    // TODO: Make a more realistic legal name
-                    myLegalName = "CN=Rates Service Provider,O=R3,OU=corda,L=London,C=UK",
+                    myLegalName = RATES_SERVICE_NAME,
                     nearestCity = "Madrid",
                     networkMapService = null)
             return object : SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot) {
@@ -141,13 +144,15 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     }
 
     object RegulatorFactory : MockNetwork.Factory {
+        // TODO: Make a more realistic legal name
+        val REGULATOR_NAME = X500Name("CN=Regulator A,O=R3,OU=corda,L=Paris,C=France")
+
         override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
                             advertisedServices: Set<ServiceInfo>, id: Int, overrideServices: Map<ServiceInfo, KeyPair>?,
                             entropyRoot: BigInteger): MockNetwork.MockNode {
             val cfg = TestNodeConfiguration(
                     baseDirectory = config.baseDirectory,
-                    // TODO: Make a more realistic legal name
-                    myLegalName = "Regulator A,O=R3,OU=corda,L=London,C=UK",
+                    myLegalName = REGULATOR_NAME,
                     nearestCity = "Paris",
                     networkMapService = null)
             return object : SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot) {
