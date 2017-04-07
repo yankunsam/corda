@@ -55,7 +55,7 @@ class NodeTerminalView : Fragment() {
     private lateinit var swingTerminal: SwingNode
 
     fun open(config: NodeConfig, onExit: (Int) -> Unit) {
-        nodeName.text = config.legalName
+        nodeName.text = config.legalName.toString()
 
         swingTerminal = SwingNode()
         swingTerminal.setOnMouseClicked {

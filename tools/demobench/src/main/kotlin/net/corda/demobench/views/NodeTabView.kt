@@ -131,7 +131,7 @@ class NodeTabView : Fragment() {
         root.add(nodeConfigView)
         root.add(nodeTerminalView)
 
-        model.legalName.value = if (nodeController.hasNetworkMap()) "" else DUMMY_NOTARY.name
+        model.legalName.value = if (nodeController.hasNetworkMap()) "" else DUMMY_NOTARY.name.toString()
         model.nearestCity.value = if (nodeController.hasNetworkMap()) null else CityDatabase["London"]!!
         model.p2pPort.value = nodeController.nextPort
         model.rpcPort.value = nodeController.nextPort
@@ -225,7 +225,7 @@ class NodeTabView : Fragment() {
         if (countryCode != null) {
             nodeTab.graphic = ImageView(flags.get()[countryCode]).apply { fitWidth = 24.0; isPreserveRatio = true }
         }
-        nodeTab.text = config.legalName
+        nodeTab.text = config.legalName.toString()
         nodeTerminalView.open(config) { exitCode ->
             Platform.runLater {
                 if (exitCode == 0)
