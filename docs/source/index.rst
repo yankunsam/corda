@@ -116,6 +116,7 @@ Documentation Contents:
    :maxdepth: 2
    :caption: Component library
 
+   flow-library
    contract-catalogue
    contract-irs
 
