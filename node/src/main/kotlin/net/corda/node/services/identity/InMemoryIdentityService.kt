@@ -55,7 +55,7 @@ class InMemoryIdentityService : SingletonSerializeAsToken(), IdentityService {
 
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
     override fun registerPath(party: Party, anonymousParty: AnonymousParty, path: CertPath) {
-        val expectedTrustAnchor = TrustAnchor(X500Principal(party.name.toString()), party.owningKey, null)
+        val expectedTrustAnchor = TrustAnchor(X500Principal(party.name.encoded), party.owningKey, null)
         require(path.certificates.isNotEmpty()) { "Certificate path must contain at least one certificate" }
         val validator = CertPathValidator.getInstance("PKIX")
         val result = validator.validate(path, PKIXParameters(setOf(expectedTrustAnchor))) as PKIXCertPathValidatorResult

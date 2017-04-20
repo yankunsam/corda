@@ -75,7 +75,7 @@ class InMemoryIdentityServiceTests {
         val txCertificate = txCertAndKey.certificate
 
         val certPathFactory = CertificateFactory.getInstance("X.509")
-        val txCertPath: CertPath = certPathFactory.generateCertPath(listOf(identityCertificate))
+        val txCertPath: CertPath = certPathFactory.generateCertPath(listOf(txCertificate))
         service.registerPath(identity, txIdentity, txCertPath)
         service.assertOwnership(identity, txIdentity)
     }
