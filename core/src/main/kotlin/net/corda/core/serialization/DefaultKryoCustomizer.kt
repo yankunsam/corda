@@ -3,7 +3,6 @@ package net.corda.core.serialization
 import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.serializers.CompatibleFieldSerializer
 import com.esotericsoftware.kryo.serializers.FieldSerializer
-import com.esotericsoftware.kryo.util.MapReferenceResolver
 import de.javakaffee.kryoserializers.ArraysAsListSerializer
 import de.javakaffee.kryoserializers.BitSetSerializer
 import de.javakaffee.kryoserializers.UnmodifiableCollectionsSerializer
@@ -26,12 +25,7 @@ import java.io.InputStream
 import java.util.*
 
 object DefaultKryoCustomizer {
-    private val pluginRegistries: List<CordaPluginRegistry> by lazy {
-        // No ClassResolver only constructor.  MapReferenceResolver is the default as used by Kryo in other constructors.
-        val unusedKryo = Kryo(makeStandardClassResolver(), MapReferenceResolver())
-        val customization = KryoSerializationCustomization(unusedKryo)
-        ServiceLoader.load(CordaPluginRegistry::class.java).toList().filter { it.customizeSerialization(customization) }
-    }
+    private val pluginRegistries: List<CordaPluginRegistry> by lazy { CordaPluginRegistry.loadPlugins(1) }
 
     fun customize(kryo: Kryo): Kryo {
         return kryo.apply {
@@ -87,7 +81,8 @@ object DefaultKryoCustomizer {
 
             register(FileInputStream::class.java, InputStreamSerializer)
             // Required for HashCheckingStream (de)serialization.
-            // Note that return type should be specifically set to InputStream, otherwise it may not work, i.e. val aStream : InputStream = HashCheckingStream(...).
+            // Note that return type should be specifically set to InputStream, otherwise it may not work,
+            // i.e. val aStream : InputStream = HashCheckingStream(...).
             addDefaultSerializer(InputStream::class.java, InputStreamSerializer)
 
             register(X500Name::class.java, X500NameSerializer)

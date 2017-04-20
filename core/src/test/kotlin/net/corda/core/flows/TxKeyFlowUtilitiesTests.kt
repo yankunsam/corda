@@ -32,7 +32,7 @@ class TxKeyFlowUtilitiesTests {
         val bobKey: Party = bobNode.services.myInfo.legalIdentity
 
         // Run the flows
-        TxKeyFlow.registerFlowInitiator(bobNode.services)
+        bobNode.installCoreFlow(TxKeyFlow.Requester::class, TxKeyFlow::Provider)
         val requesterFlow = aliceNode.services.startFlow(TxKeyFlow.Requester(bobKey))
 
         // Get the results

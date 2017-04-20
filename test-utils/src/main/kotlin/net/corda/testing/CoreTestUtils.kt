@@ -147,7 +147,7 @@ inline fun <reified P : FlowLogic<*>> AbstractNode.initiateSingleShotFlow(
         markerClass: KClass<out FlowLogic<*>>,
         noinline flowFactory: (Party) -> P): ListenableFuture<P> {
     val future = smm.changes.filter { it.addOrRemove == ADD && it.logic is P }.map { it.logic as P }.toFuture()
-    services.registerFlowInitiator(markerClass.java, flowFactory)
+    installCoreFlow(markerClass, flowFactory)
     return future
 }
 

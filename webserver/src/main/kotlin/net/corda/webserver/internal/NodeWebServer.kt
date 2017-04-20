@@ -27,7 +27,6 @@ import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.io.Writer
 import java.lang.reflect.InvocationTargetException
-import java.util.ServiceLoader
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs.core.MediaType
 
@@ -135,6 +134,8 @@ class NodeWebServer(val config: WebServerConfig) {
                 .register(ResponseFilter())
                 .register(APIServerImpl(localRpc))
 
+            val pluginRegistries = CordaPluginRegistry.loadPlugins(localRpc.nodeIdentity().platformVersion)
+
             val webAPIsOnClasspath = pluginRegistries.flatMap { x -> x.webApis }
             for (webapi in webAPIsOnClasspath) {
                 log.info("Add plugin web API from attachment $webapi")
@@ -195,11 +196,6 @@ class NodeWebServer(val config: WebServerConfig) {
         val client = CordaRPCClient(config.p2pAddress, config)
         client.start(ArtemisMessagingComponent.NODE_USER, ArtemisMessagingComponent.NODE_USER)
         return client.proxy()
-    }
-
-    /** Fetch CordaPluginRegistry classes registered in META-INF/services/net.corda.core.node.CordaPluginRegistry files that exist in the classpath */
-    val pluginRegistries: List<CordaPluginRegistry> by lazy {
-        ServiceLoader.load(CordaPluginRegistry::class.java).toList()
     }
 
     /** Used for useful info that we always want to show, even when not logging to the console */

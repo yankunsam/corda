@@ -24,9 +24,4 @@ interface PluginServiceHub : ServiceHub {
     fun registerFlowInitiator(markerClass: KClass<*>, flowFactory: (Party) -> FlowLogic<*>) {
         registerFlowInitiator(markerClass.java, flowFactory)
     }
-
-    /**
-     * Return the flow factory that has been registered with [markerClass], or null if no factory is found.
-     */
-    fun getFlowFactory(markerClass: Class<*>): ((Party) -> FlowLogic<*>)?
 }

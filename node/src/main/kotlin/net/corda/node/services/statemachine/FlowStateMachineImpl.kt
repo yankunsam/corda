@@ -23,6 +23,7 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.trace
+import net.corda.node.services.api.ServiceFlowContext
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.utilities.StrandLocalTransactionManager
 import net.corda.node.utilities.createTransaction
@@ -39,6 +40,7 @@ import java.util.concurrent.TimeUnit
 
 class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                               val logic: FlowLogic<R>,
+                              val source: ServiceFlowContext.Source?,
                               scheduler: FiberScheduler) : Fiber<Unit>(id.toString(), scheduler), FlowStateMachine<R> {
     companion object {
         // Used to work around a small limitation in Quasar.

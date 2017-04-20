@@ -1,7 +1,6 @@
 package net.corda.node.services
 
 import com.codahale.metrics.MetricRegistry
-import net.corda.core.crypto.Party
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.flows.FlowStateMachine
@@ -9,11 +8,7 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.*
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.serialization.NodeClock
-import net.corda.node.services.api.MessagingServiceInternal
-import net.corda.node.services.api.MonitoringService
-import net.corda.node.services.api.SchemaService
-import net.corda.node.services.api.ServiceHubInternal
-import net.corda.node.services.persistence.DataVending
+import net.corda.node.services.api.*
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
@@ -21,7 +16,6 @@ import net.corda.testing.MOCK_IDENTITY_SERVICE
 import net.corda.testing.node.MockNetworkMapCache
 import net.corda.testing.node.MockStorageService
 import java.time.Clock
-import java.util.concurrent.ConcurrentHashMap
 
 open class MockServiceHubInternal(
         val customVault: VaultService? = null,
@@ -67,29 +61,11 @@ open class MockServiceHubInternal(
     private val txStorageService: TxWritableStorageService
         get() = storage ?: throw UnsupportedOperationException()
 
-    private val flowFactories = ConcurrentHashMap<Class<*>, (Party) -> FlowLogic<*>>()
-
     lateinit var smm: StateMachineManager
-
-    init {
-        if (net != null && storage != null) {
-            // Creating this class is sufficient, we don't have to store it anywhere, because it registers a listener
-            // on the networking service, so that will keep it from being collected.
-            DataVending.Service(this)
-        }
-    }
 
     override fun recordTransactions(txs: Iterable<SignedTransaction>) = recordTransactionsInternal(txStorageService, txs)
 
-    override fun <T> startFlow(logic: FlowLogic<T>): FlowStateMachine<T> {
-        return smm.executor.fetchFrom { smm.add(logic) }
-    }
+    override fun <T> startFlow(logic: FlowLogic<T>): FlowStateMachine<T> = smm.executor.fetchFrom { smm.add(logic) }
 
-    override fun registerFlowInitiator(markerClass: Class<*>, flowFactory: (Party) -> FlowLogic<*>) {
-        flowFactories[markerClass] = flowFactory
-    }
-
-    override fun getFlowFactory(markerClass: Class<*>): ((Party) -> FlowLogic<*>)? {
-        return flowFactories[markerClass]
-    }
+    override fun getServiceFlowContext(markerClass: Class<*>): ServiceFlowContext? = throw UnsupportedOperationException()
 }

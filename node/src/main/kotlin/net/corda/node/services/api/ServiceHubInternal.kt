@@ -1,15 +1,17 @@
 package net.corda.node.services.api
 
 import com.google.common.util.concurrent.ListenableFuture
+import net.corda.core.crypto.Party
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.flows.FlowStateMachine
 import net.corda.core.messaging.MessagingService
-import net.corda.core.node.PluginServiceHub
+import net.corda.core.node.CordaPluginRegistry
+import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.TxWritableStorageService
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.loggerFor
 import net.corda.node.services.statemachine.FlowStateMachineImpl
-import org.slf4j.LoggerFactory
 
 interface MessagingServiceInternal : MessagingService {
     /**
@@ -34,14 +36,19 @@ interface MessagingServiceBuilder<out T : MessagingServiceInternal> {
     fun start(): ListenableFuture<out T>
 }
 
-private val log = LoggerFactory.getLogger(ServiceHubInternal::class.java)
 
-abstract class ServiceHubInternal : PluginServiceHub {
+abstract class ServiceHubInternal : ServiceHub {
+    companion object {
+        private val log = loggerFor<ServiceHubInternal>()
+    }
+
     abstract val monitoringService: MonitoringService
     abstract val flowLogicRefFactory: FlowLogicRefFactory
     abstract val schemaService: SchemaService
 
     abstract override val networkService: MessagingServiceInternal
+
+    abstract fun getServiceFlowContext(markerClass: Class<*>): ServiceFlowContext?
 
     /**
      * Given a list of [SignedTransaction]s, writes them to the given storage for validated transactions and then
@@ -73,5 +80,13 @@ abstract class ServiceHubInternal : PluginServiceHub {
         @Suppress("UNCHECKED_CAST")
         val logic = flowLogicRefFactory.toFlowLogic(logicRef) as FlowLogic<T>
         return startFlow(logic)
+    }
+}
+
+
+data class ServiceFlowContext(val source: Source, val flowFactory: (Party) -> FlowLogic<*>) {
+    sealed class Source {
+        data class CorDapp(val corDappClass: Class<out CordaPluginRegistry>, val version: String) : Source()
+        object Core : Source()
     }
 }

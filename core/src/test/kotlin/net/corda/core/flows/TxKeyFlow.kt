@@ -14,9 +14,6 @@ import java.security.cert.Certificate
  * DoS of the node, as key generation/storage is vastly more expensive than submitting a request.
  */
 object TxKeyFlow {
-    fun registerFlowInitiator(services: PluginServiceHub) {
-        services.registerFlowInitiator(Requester::class.java, ::Provider)
-    }
 
     class Requester(val otherSide: Party,
                     override val progressTracker: ProgressTracker) : FlowLogic<Pair<PublicKey, Certificate?>>() {

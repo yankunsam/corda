@@ -2,9 +2,6 @@ package net.corda.node.services.transactions
 
 import net.corda.core.crypto.Party
 import net.corda.core.flows.FlowLogic
-import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.flows.NotaryFlow
-import net.corda.node.services.api.ServiceHubInternal
 
 /**
  * A Notary service acts as the final signer of a transaction ensuring two things:
@@ -15,13 +12,8 @@ import net.corda.node.services.api.ServiceHubInternal
  *
  * This is the base implementation that can be customised with specific Notary transaction commit flow.
  */
-abstract class NotaryService(services: ServiceHubInternal) : SingletonSerializeAsToken() {
+interface NotaryService {
 
-    init {
-        services.registerFlowInitiator(NotaryFlow.Client::class.java) { createFlow(it) }
-    }
-
-    /** Implement a factory that specifies the transaction commit flow for the notary service to use */
-    abstract fun createFlow(otherParty: Party): FlowLogic<Void?>
+    val serviceFlowFactory: (Party) -> FlowLogic<Void?>
 
 }

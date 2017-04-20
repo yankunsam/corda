@@ -33,6 +33,7 @@ import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
 import net.corda.node.services.api.Checkpoint
 import net.corda.node.services.api.CheckpointStorage
+import net.corda.node.services.api.ServiceFlowContext
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.utilities.*
 import org.apache.activemq.artemis.utils.ReusableLatch
@@ -350,16 +351,16 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
             return
         }
 
-        val flowFactory = serviceHub.getFlowFactory(markerClass)
-        if (flowFactory == null) {
+        val flowContext = serviceHub.getServiceFlowContext(markerClass)
+        if (flowContext == null) {
             logger.warn("Unknown flow marker class in $sessionInit")
             sendSessionReject("Don't know ${markerClass.name}")
             return
         }
 
         val session = try {
-            val flow = flowFactory(sender)
-            val fiber = createFiber(flow)
+            val flow = flowContext.flowFactory(sender)
+            val fiber = createFiber(flow, flowContext.source)
             val session = FlowSession(flow, random63BitValue(), sender, FlowSessionState.Initiated(sender, otherPartySessionId))
             if (sessionInit.firstPayload != null) {
                 session.receivedMessages += ReceivedSessionMessage(sender, SessionData(session.ourSessionId, sessionInit.firstPayload))
@@ -398,9 +399,9 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
 
     private fun quasarKryo(): KryoPool = quasarKryoPool
 
-    private fun <T> createFiber(logic: FlowLogic<T>): FlowStateMachineImpl<T> {
+    private fun <T> createFiber(logic: FlowLogic<T>, source: ServiceFlowContext.Source?): FlowStateMachineImpl<T> {
         val id = StateMachineRunId.createRandom()
-        return FlowStateMachineImpl(id, logic, scheduler).apply { initFiber(this) }
+        return FlowStateMachineImpl(id, logic, source, scheduler).apply { initFiber(this) }
     }
 
     private fun initFiber(fiber: FlowStateMachineImpl<*>) {
@@ -479,7 +480,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         // unable to acquire the table lock and move forward till the calling transaction finishes.
         // Committing in line here on a fresh context ensure we can progress.
         val fiber = database.isolatedTransaction {
-            val fiber = createFiber(logic)
+            val fiber = createFiber(logic, null)
             updateCheckpoint(fiber)
             fiber
         }
