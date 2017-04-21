@@ -17,7 +17,7 @@ import net.corda.irs.api.NodeInterestRates
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.SimpleNotaryService
-import net.corda.node.utilities.AddOrRemove
+import net.corda.node.utilities.AddOrRemoveError
 import net.corda.node.utilities.transaction
 import net.corda.testing.TestNodeConfiguration
 import net.corda.testing.node.InMemoryMessagingNetwork
@@ -237,7 +237,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
 
     protected fun showProgressFor(nodes: List<SimulatedNode>) {
         nodes.forEach { node ->
-            node.smm.changes.filter { it.addOrRemove == AddOrRemove.ADD }.subscribe {
+            node.smm.changes.filter { it.addOrRemoveError is AddOrRemoveError.Add }.subscribe {
                 linkFlowProgress(node, it.logic)
             }
         }
@@ -254,7 +254,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
 
     protected fun showConsensusFor(nodes: List<SimulatedNode>) {
         val node = nodes.first()
-        node.smm.changes.filter { it.addOrRemove == net.corda.node.utilities.AddOrRemove.ADD }.first().subscribe {
+        node.smm.changes.filter { it.addOrRemoveError is AddOrRemoveError.Add }.first().subscribe {
             linkConsensus(nodes, it.logic)
         }
     }

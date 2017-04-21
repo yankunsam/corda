@@ -13,6 +13,7 @@ import com.esotericsoftware.kryo.pool.KryoPool
 import com.google.common.collect.HashMultimap
 import com.google.common.util.concurrent.ListenableFuture
 import io.requery.util.CloseableIterator
+import net.corda.core.ErrorOr
 import net.corda.core.ThreadBox
 import net.corda.core.bufferUntilSubscribed
 import net.corda.core.crypto.Party
@@ -112,7 +113,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
 
     data class Change(
             val logic: FlowLogic<*>,
-            val addOrRemove: AddOrRemove,
+            val addOrRemoveError: AddOrRemoveError,
             val id: StateMachineRunId
     )
 
@@ -124,8 +125,8 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         val changesPublisher = PublishSubject.create<Change>()!!
         val fibersWaitingForLedgerCommit = HashMultimap.create<SecureHash, FlowStateMachineImpl<*>>()!!
 
-        fun notifyChangeObservers(fiber: FlowStateMachineImpl<*>, addOrRemove: AddOrRemove) {
-            changesPublisher.bufferUntilDatabaseCommit().onNext(Change(fiber.logic, addOrRemove, fiber.id))
+        fun notifyChangeObservers(fiber: FlowStateMachineImpl<*>, addOrRemoveError: AddOrRemoveError) {
+            changesPublisher.bufferUntilDatabaseCommit().onNext(Change(fiber.logic, addOrRemoveError, fiber.id))
         }
     }
 
@@ -418,7 +419,12 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
             try {
                 mutex.locked {
                     stateMachines.remove(fiber)?.let { checkpointStorage.removeCheckpoint(it) }
-                    notifyChangeObservers(fiber, AddOrRemove.REMOVE)
+                    val reason: ErrorOr<String> = if (exception == null) {
+                        ErrorOr("Normal")
+                    } else {
+                        ErrorOr.of(exception)
+                    }
+                    notifyChangeObservers(fiber, AddOrRemoveError.Remove(reason))
                 }
                 endAllFiberSessions(fiber, exception, propagated)
             } finally {
@@ -431,7 +437,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         mutex.locked {
             totalStartedFlows.inc()
             unfinishedFibers.countUp()
-            notifyChangeObservers(fiber, AddOrRemove.ADD)
+            notifyChangeObservers(fiber, AddOrRemoveError.Add)
         }
     }
 
