@@ -211,7 +211,9 @@ class NodeTerminalView : Fragment() {
 
     fun destroy() {
         if (!isDestroyed) {
-            subscriptions.forEach { it.unsubscribe() }
+            subscriptions.forEach {
+                try { it.unsubscribe() } catch (e: Exception) {}
+            }
             webServer.close()
             explorer.close()
             viewer.close()
