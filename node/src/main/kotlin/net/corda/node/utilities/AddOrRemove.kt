@@ -18,5 +18,5 @@ enum class AddOrRemove {
 @CordaSerializable
 sealed class AddOrRemoveError {
     object Add: AddOrRemoveError()
-    class Remove(val reason: ErrorOr<String>): AddOrRemoveError()
+    class Remove(val reason: ErrorOr<*>): AddOrRemoveError()
 }

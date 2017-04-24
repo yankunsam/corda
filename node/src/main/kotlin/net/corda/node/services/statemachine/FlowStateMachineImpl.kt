@@ -75,7 +75,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     @Transient override lateinit var serviceHub: ServiceHubInternal
     @Transient internal lateinit var database: Database
     @Transient internal lateinit var actionOnSuspend: (FlowIORequest) -> Unit
-    @Transient internal lateinit var actionOnEnd: (Throwable?, Boolean) -> Unit
+    @Transient internal lateinit var actionOnEnd: (R?, Throwable?, Boolean) -> Unit
     @Transient internal var fromCheckpoint: Boolean = false
     @Transient private var txTrampoline: Transaction? = null
 
@@ -143,7 +143,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                 .filter { it.state is FlowSessionState.Initiating }
                 .forEach { it.waitForConfirmation() }
         // This is to prevent actionOnEnd being called twice if it throws an exception
-        actionOnEnd(null, false)
+        actionOnEnd(result, null, false)
         _resultFuture?.set(result)
         logic.progressTracker?.currentStep = ProgressTracker.DONE
         logger.debug { "Flow finished with result $result" }
@@ -156,7 +156,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     private fun processException(exception: Throwable, propagated: Boolean) {
-        actionOnEnd(exception, propagated)
+        actionOnEnd(null, exception, propagated)
         _resultFuture?.setException(exception)
         logic.progressTracker?.endWithError(exception)
     }

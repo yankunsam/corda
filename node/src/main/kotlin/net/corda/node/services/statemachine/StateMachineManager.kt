@@ -415,12 +415,12 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
             processIORequest(ioRequest)
             decrementLiveFibers()
         }
-        fiber.actionOnEnd = { exception, propagated ->
+        fiber.actionOnEnd = { result, exception, propagated ->
             try {
                 mutex.locked {
                     stateMachines.remove(fiber)?.let { checkpointStorage.removeCheckpoint(it) }
-                    val reason: ErrorOr<String> = if (exception == null) {
-                        ErrorOr("Normal")
+                    val reason: ErrorOr<*> = if (exception == null) {
+                        ErrorOr(result)
                     } else {
                         ErrorOr.of(exception)
                     }

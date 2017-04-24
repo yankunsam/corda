@@ -40,7 +40,7 @@ sealed class StateMachineUpdate {
         override val id: StateMachineRunId get() = stateMachineInfo.id
     }
 
-    data class Removed(override val id: StateMachineRunId, val reason: ErrorOr<String>) : StateMachineUpdate()
+    data class Removed(override val id: StateMachineRunId, val reason: ErrorOr<*>) : StateMachineUpdate()
 }
 
 /**
