@@ -34,7 +34,7 @@ object ProcessUtilities {
 
         val allArguments = listOf(javaPath) +
                 debugPortArgument +
-                listOf("-Xmx200m", "-XX:+UseG1GC") +
+                listOf("-Xmx200m", "-XX:+UseG1GC", "-Dlog4j.skipJansi=true") +
                 extraJvmArguments +
                 listOf("-cp", classpath, className) +
                 arguments.toList()

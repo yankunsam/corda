@@ -721,7 +721,7 @@ infix fun <T : Any> Obligation.State<T>.`issued by`(party: AbstractParty) = copy
 @Suppress("unused") fun <T : Any> Obligation.State<T>.issuedBy(party: AnonymousParty) = copy(obligor = party)
 
 /** A randomly generated key. */
-val DUMMY_OBLIGATION_ISSUER_KEY by lazy { entropyToKeyPair(BigInteger.valueOf(10)) }
+val DUMMY_OBLIGATION_ISSUER_KEY by lazy { entropyToEdDSAKeyPair(BigInteger.valueOf(10)) }
 /** A dummy, randomly generated issuer party by the name of "Snake Oil Issuer" */
 val DUMMY_OBLIGATION_ISSUER by lazy { Party("Snake Oil Issuer", DUMMY_OBLIGATION_ISSUER_KEY.public) }
 

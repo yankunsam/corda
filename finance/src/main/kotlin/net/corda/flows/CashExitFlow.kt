@@ -40,7 +40,7 @@ class CashExitFlow(val amount: Amount<Currency>, val issueRef: OpaqueBytes, prog
                     amount.issuedBy(issuer),
                     exitStates)
         } catch (e: InsufficientBalanceException) {
-            throw CashException("Exiting more cash than exists", e)
+            // throw CashException("Exiting more cash than exists", e)
         }
         progressTracker.currentStep = SIGNING_TX
         val myKey = serviceHub.legalIdentityKey

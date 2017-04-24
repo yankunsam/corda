@@ -20,25 +20,25 @@ object CommercialPaperSchemaV1 : MappedSchema(schemaFamily = CommercialPaperSche
     @Entity
     @Table(name = "cp_states")
     class PersistentCommericalPaperState(
-            @Column(name = "issuance_key")
+            @Column(name = "issuance_key", length = 1600)
             var issuanceParty: String,
 
             @Column(name = "issuance_ref")
             var issuanceRef: ByteArray,
 
-            @Column(name = "owner_key")
+            @Column(name = "owner_key", length = 1600)
             var owner: String,
 
             @Column(name = "maturity_instant")
             var maturity: Instant,
 
-            @Column(name = "face_value")
+            @Column(name = "face_value", length = 1600)
             var faceValue: Long,
 
             @Column(name = "ccy_code", length = 3)
             var currency: String,
 
-            @Column(name = "face_value_issuer_key")
+            @Column(name = "face_value_issuer_key", length = 1600)
             var faceValueIssuerParty: String,
 
             @Column(name = "face_value_issuer_ref")

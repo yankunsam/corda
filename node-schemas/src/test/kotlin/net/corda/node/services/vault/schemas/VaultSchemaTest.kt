@@ -635,11 +635,11 @@ class VaultSchemaTest {
 
     @Test
     fun insertWithBigCompositeKey() {
-        val keys = (1..314).map { generateKeyPair().public }
+        val keys = (1..3).map { generateKeyPair().public }
         val bigNotaryKey = CompositeKey.Builder().addKeys(keys).build()
         val vaultStEntity = VaultStatesEntity().apply {
             txId = SecureHash.randomSHA256().toString()
-            index = 314
+            index = 3
             stateStatus = Vault.StateStatus.UNCONSUMED
             contractStateClassName = VaultNoopContract.VaultNoopState::class.java.name
             notaryName = "Huge distributed notary"

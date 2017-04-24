@@ -17,11 +17,19 @@ import net.corda.core.utilities.NonEmptySetSerializer
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import org.bouncycastle.asn1.x500.X500Name
+import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey
+import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey
+import org.bouncycastle.jcajce.provider.asymmetric.rsa.BCRSAPrivateCrtKey
+import org.bouncycastle.jcajce.provider.asymmetric.rsa.BCRSAPublicKey
+import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PrivateKey
+import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PublicKey
 import org.objenesis.strategy.StdInstantiatorStrategy
 import org.slf4j.Logger
 import java.io.BufferedInputStream
 import java.io.FileInputStream
 import java.io.InputStream
+import java.security.PrivateKey
+import java.security.PublicKey
 import java.util.*
 
 object DefaultKryoCustomizer {
@@ -90,6 +98,13 @@ object DefaultKryoCustomizer {
             addDefaultSerializer(InputStream::class.java, InputStreamSerializer)
 
             register(X500Name::class.java, X500NameSerializer)
+
+            register(BCSphincs256PrivateKey::class.java, PrivateKeySerializer)
+            register(BCSphincs256PublicKey::class.java, PublicKeySerializer)
+            register(BCECPrivateKey::class.java, PrivateKeySerializer)
+            register(BCECPublicKey::class.java, PublicKeySerializer)
+            register(BCRSAPrivateCrtKey::class.java, PrivateKeySerializer)
+            register(BCRSAPublicKey::class.java, PublicKeySerializer)
 
             val customization = KryoSerializationCustomization(this)
             pluginRegistries.forEach { it.customizeSerialization(customization) }

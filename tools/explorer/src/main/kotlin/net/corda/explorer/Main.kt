@@ -244,7 +244,7 @@ fun main(args: Array<String>) {
                 }
             }
 
-            for (i in 0..maxIterations) {
+            for (i in 0..20) {
                 Thread.sleep(300)
                 // Issuer requests.
                 eventGenerator.issuerGenerator.map { command ->
@@ -275,6 +275,7 @@ fun main(args: Array<String>) {
             issuerClientGBP.close()
             issuerClientUSD.close()
         }
+        System.exit(0)
         waitForAllNodesToFinish()
     }
 }

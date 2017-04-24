@@ -6,7 +6,7 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.*
 import net.corda.core.crypto.Party
-import net.corda.core.crypto.entropyToKeyPair
+import net.corda.core.crypto.entropyToEdDSAKeyPair
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.CordaPluginRegistry
@@ -188,7 +188,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         // This is not thread safe, but node construction is done on a single thread, so that should always be fine
         override fun generateKeyPair(): KeyPair {
             counter = counter.add(BigInteger.ONE)
-            return entropyToKeyPair(counter)
+            return entropyToEdDSAKeyPair(counter)
         }
 
         // It's OK to not have a network map service in the mock network.

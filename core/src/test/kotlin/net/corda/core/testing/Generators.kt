@@ -32,14 +32,14 @@ fun <A> Generator<A>.generateList(random: SourceOfRandomness, status: Generation
 
 class PrivateKeyGenerator : Generator<PrivateKey>(PrivateKey::class.java) {
     override fun generate(random: SourceOfRandomness, status: GenerationStatus): PrivateKey {
-        return entropyToKeyPair(random.nextBigInteger(32)).private
+        return entropyToEdDSAKeyPair(random.nextBigInteger(32)).private
     }
 }
 
 // TODO add CompositeKeyGenerator that actually does something useful.
 class PublicKeyGenerator : Generator<PublicKey>(PublicKey::class.java) {
     override fun generate(random: SourceOfRandomness, status: GenerationStatus): PublicKey {
-        return entropyToKeyPair(random.nextBigInteger(32)).public
+        return entropyToEdDSAKeyPair(random.nextBigInteger(32)).public
     }
 }
 

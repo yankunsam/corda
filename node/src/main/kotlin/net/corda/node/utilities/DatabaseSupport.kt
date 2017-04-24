@@ -287,7 +287,7 @@ fun Table.txnNote(txIdColumnName: String, txnNoteColumnName: String) = TxnNoteCo
 //  of a CompositeKey they could be CLOB fields. Given the time to fetch these types and that they are unsuitable as table keys,
 //  having a shorter primary key (such as SHA256 hash or a UUID generated on demand) that references a common composite key table may make more sense.
 object PublicKeyColumnType : ColumnType() {
-    override fun sqlType(): String = "VARCHAR"
+    override fun sqlType(): String = "VARCHAR(1600)"
 
     override fun valueFromDB(value: Any): Any = parsePublicKeyBase58(value.toString())
 

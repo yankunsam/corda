@@ -19,9 +19,9 @@ class CompositeKeyTests {
 
     val message = OpaqueBytes("Transaction".toByteArray())
 
-    val aliceSignature = aliceKey.signWithECDSA(message)
-    val bobSignature = bobKey.signWithECDSA(message)
-    val charlieSignature = charlieKey.signWithECDSA(message)
+    val aliceSignature = aliceKey.sign(message)
+    val bobSignature = bobKey.sign(message)
+    val charlieSignature = charlieKey.sign(message)
     val compositeAliceSignature = CompositeSignaturesWithKeys(listOf(aliceSignature))
 
     @Test

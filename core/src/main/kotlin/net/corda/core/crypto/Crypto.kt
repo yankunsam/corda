@@ -12,6 +12,7 @@ import java.security.*
 import java.security.spec.InvalidKeySpecException
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
+import javax.annotation.concurrent.ThreadSafe
 
 /**
  * This object controls and provides the available and supported signature schemes for Corda.
@@ -40,7 +41,8 @@ object Crypto {
             1,
             "RSA_SHA256",
             "RSA",
-            Signature.getInstance("SHA256WITHRSAANDMGF1", "BC"),
+            "BC",
+            "SHA256WITHRSAANDMGF1",
             KeyFactory.getInstance("RSA", "BC"),
             KeyPairGenerator.getInstance("RSA", "BC"),
             null,
@@ -53,7 +55,8 @@ object Crypto {
             2,
             "ECDSA_SECP256K1_SHA256",
             "ECDSA",
-            Signature.getInstance("SHA256withECDSA", "BC"),
+            "BC",
+            "SHA256withECDSA",
             KeyFactory.getInstance("ECDSA", "BC"),
             KeyPairGenerator.getInstance("ECDSA", "BC"),
             ECNamedCurveTable.getParameterSpec("secp256k1"),
@@ -66,7 +69,8 @@ object Crypto {
             3,
             "ECDSA_SECP256R1_SHA256",
             "ECDSA",
-            Signature.getInstance("SHA256withECDSA", "BC"),
+            "BC",
+            "SHA256withECDSA",
             KeyFactory.getInstance("ECDSA", "BC"),
             KeyPairGenerator.getInstance("ECDSA", "BC"),
             ECNamedCurveTable.getParameterSpec("secp256r1"),
@@ -79,7 +83,8 @@ object Crypto {
             4,
             "EDDSA_ED25519_SHA512",
             "EdDSA",
-            EdDSAEngine(),
+            "i2p",
+            "EDDSA_SHA256",
             EdDSAKeyFactory,
             net.i2p.crypto.eddsa.KeyPairGenerator(), // EdDSA engine uses a custom KeyPairGenerator Vs BouncyCastle.
             EdDSANamedCurveTable.getByName("ed25519-sha-512"),
@@ -95,7 +100,8 @@ object Crypto {
             5,
             "SPHINCS-256_SHA512",
             "SPHINCS-256",
-            Signature.getInstance("SHA512WITHSPHINCS256", "BCPQC"),
+            "BCPQC",
+            "SHA512WITHSPHINCS256",
             KeyFactory.getInstance("SPHINCS256", "BCPQC"),
             KeyPairGenerator.getInstance("SPHINCS256", "BCPQC"),
             SPHINCS256KeyGenParameterSpec(SPHINCS256KeyGenParameterSpec.SHA512_256),
@@ -105,7 +111,7 @@ object Crypto {
     )
 
     /** Our default signature scheme if no algorithm is specified (e.g. for key generation). */
-    private val DEFAULT_SIGNATURE_SCHEME = EDDSA_ED25519_SHA512
+    private val DEFAULT_SIGNATURE_SCHEME = ECDSA_SECP256R1_SHA256
 
     /**
      * Supported digital signature schemes.
@@ -187,7 +193,7 @@ object Crypto {
      */
     @Throws(IllegalArgumentException::class)
     fun decodePrivateKey(encodedKey: ByteArray): PrivateKey {
-        for ((_, _, _, _, keyFactory) in supportedSignatureSchemes.values) {
+        for ((_, _, _, _, _, keyFactory) in supportedSignatureSchemes.values) {
             try {
                 return keyFactory.generatePrivate(PKCS8EncodedKeySpec(encodedKey))
             } catch (ikse: InvalidKeySpecException) {
@@ -218,13 +224,12 @@ object Crypto {
     /**
      * Decode an X509 encoded key to its [PublicKey] object.
      * @param encodedKey an X509 encoded public key.
-     * @throws UnsupportedSchemeException on not supported scheme.
      * @throws IllegalArgumentException on not supported scheme or if the given key specification
      * is inappropriate for this key factory to produce a private key.
      */
     @Throws(IllegalArgumentException::class)
     fun decodePublicKey(encodedKey: ByteArray): PublicKey {
-        for ((_, _, _, _, keyFactory) in supportedSignatureSchemes.values) {
+        for ((_, _, _, _, _, keyFactory) in supportedSignatureSchemes.values) {
             try {
                 return keyFactory.generatePublic(X509EncodedKeySpec(encodedKey))
             } catch (ikse: InvalidKeySpecException) {
@@ -280,7 +285,7 @@ object Crypto {
      * @throws SignatureException if signing is not possible due to malformed data or private key.
      */
     @Throws(IllegalArgumentException::class, InvalidKeyException::class, SignatureException::class)
-    fun doSign(privateKey: PrivateKey, clearData: ByteArray) = doSign(findSignatureScheme(privateKey).sig, privateKey, clearData)
+    fun doSign(privateKey: PrivateKey, clearData: ByteArray) = doSign(findSignatureScheme(privateKey), privateKey, clearData)
 
     /**
      * Generic way to sign [ByteArray] data with a [PrivateKey] and a known schemeCodeName [String].
@@ -293,11 +298,11 @@ object Crypto {
      * @throws SignatureException if signing is not possible due to malformed data or private key.
      */
     @Throws(IllegalArgumentException::class, InvalidKeyException::class, SignatureException::class)
-    fun doSign(schemeCodeName: String, privateKey: PrivateKey, clearData: ByteArray) = doSign(findSignatureScheme(schemeCodeName).sig, privateKey, clearData)
+    fun doSign(schemeCodeName: String, privateKey: PrivateKey, clearData: ByteArray) = doSign(findSignatureScheme(schemeCodeName), privateKey, clearData)
 
     /**
      * Generic way to sign [ByteArray] data with a [PrivateKey] and a known [Signature].
-     * @param signature a [Signature] object, retrieved from supported signature schemes, see [Crypto].
+     * @param signatureScheme a [SignatureScheme] object, retrieved from supported signature schemes, see [Crypto].
      * @param privateKey the signer's [PrivateKey].
      * @param clearData the data/message to be signed in [ByteArray] form (usually the Merkle root).
      * @return the digital signature (in [ByteArray]) on the input message.
@@ -306,7 +311,11 @@ object Crypto {
      * @throws SignatureException if signing is not possible due to malformed data or private key.
      */
     @Throws(IllegalArgumentException::class, InvalidKeyException::class, SignatureException::class)
-    private fun doSign(signature: Signature, privateKey: PrivateKey, clearData: ByteArray): ByteArray {
+    private fun doSign(signatureScheme: SignatureScheme, privateKey: PrivateKey, clearData: ByteArray): ByteArray {
+        val signature = if (signatureScheme.schemeCodeName == "EDDSA_ED25519_SHA512")
+                            EdDSAEngine()
+                        else
+                            Signature.getInstance(signatureScheme.sigSchemeName, signatureScheme.providerName)
         if (clearData.isEmpty()) throw Exception("Signing of an empty array is not permitted!")
         signature.initSign(privateKey)
         signature.update(clearData)
@@ -347,7 +356,7 @@ object Crypto {
      * @throws IllegalArgumentException if the signature scheme is not supported or if any of the clear or signature data is empty.
      */
     @Throws(InvalidKeyException::class, SignatureException::class, IllegalArgumentException::class)
-    fun doVerify(schemeCodeName: String, publicKey: PublicKey, signatureData: ByteArray, clearData: ByteArray) = doVerify(findSignatureScheme(schemeCodeName).sig, publicKey, signatureData, clearData)
+    fun doVerify(schemeCodeName: String, publicKey: PublicKey, signatureData: ByteArray, clearData: ByteArray) = doVerify(findSignatureScheme(schemeCodeName), publicKey, signatureData, clearData)
 
     /**
      * Utility to simplify the act of verifying a digital signature by identifying the signature scheme used from the input public key's type.
@@ -365,12 +374,28 @@ object Crypto {
      * @throws IllegalArgumentException if the signature scheme is not supported or if any of the clear or signature data is empty.
      */
     @Throws(InvalidKeyException::class, SignatureException::class, IllegalArgumentException::class)
-    fun doVerify(publicKey: PublicKey, signatureData: ByteArray, clearData: ByteArray) = doVerify(findSignatureScheme(publicKey).sig, publicKey, signatureData, clearData)
+    fun doVerify(publicKey: PublicKey, signatureData: ByteArray, clearData: ByteArray) = doVerify(findSignatureScheme(publicKey), publicKey, signatureData, clearData)
+
+    /**
+     * Utility to simplify the act of verifying a digital signature by identifying the signature scheme used from the input public key's type.
+     * It returns true if it succeeds and false if not. In comparison to [doVerify] if the key and signature
+     * do not match it returns false rather than throwing an exception. Normally you should use the function which throws,
+     * as it avoids the risk of failing to test the result.
+     * @param publicKey the signer's [PublicKey].
+     * @param signatureData the signatureData on a message.
+     * @param clearData the clear data/message that was signed (usually the Merkle root).
+     * @return true if verification passes or false if verification fails.
+     * @throws SignatureException if this signatureData object is not initialized properly,
+     * the passed-in signatureData is improperly encoded or of the wrong type,
+     * if this signatureData scheme is unable to process the input data provided, if the verification is not possible.
+     */
+    @Throws(SignatureException::class)
+    fun isValid(publicKey: PublicKey, signatureData: ByteArray, clearData: ByteArray) = isValid(findSignatureScheme(publicKey), publicKey, signatureData, clearData)
 
     /**
      * Method to verify a digital signature.
      * It returns true if it succeeds, but it always throws an exception if verification fails.
-     * @param signature a [Signature] object, retrieved from supported signature schemes, see [Crypto].
+     * @param signatureScheme a [SignatureScheme] object, retrieved from supported signature schemes, see [Crypto].
      * @param publicKey the signer's [PublicKey].
      * @param signatureData the signatureData on a message.
      * @param clearData the clear data/message that was signed (usually the Merkle root).
@@ -381,17 +406,31 @@ object Crypto {
      * if this signatureData scheme is unable to process the input data provided, if the verification is not possible.
      * @throws IllegalArgumentException if any of the clear or signature data is empty.
      */
-    private fun doVerify(signature: Signature, publicKey: PublicKey, signatureData: ByteArray, clearData: ByteArray): Boolean {
+    @Throws(InvalidKeyException::class, SignatureException::class, IllegalArgumentException::class)
+    private fun doVerify(signatureScheme: SignatureScheme, publicKey: PublicKey, signatureData: ByteArray, clearData: ByteArray): Boolean {
         if (signatureData.isEmpty()) throw IllegalArgumentException("Signature data is empty!")
         if (clearData.isEmpty()) throw IllegalArgumentException("Clear data is empty, nothing to verify!")
-        signature.initVerify(publicKey)
-        signature.update(clearData)
-        val verificationResult = signature.verify(signatureData)
+        val verificationResult = isValid(signatureScheme, publicKey, signatureData, clearData)
         if (verificationResult) {
             return true
         } else {
             throw SignatureException("Signature Verification failed!")
         }
+    }
+
+    /**
+     * Method to verify a digital signature. In comparison to [doVerify] if the key and signature
+     * do not match it returns false rather than throwing an exception.
+     */
+    @Throws(SignatureException::class)
+    private fun isValid(signatureScheme: SignatureScheme, publicKey: PublicKey, signatureData: ByteArray, clearData: ByteArray): Boolean {
+        val signature = if (signatureScheme.schemeCodeName == "EDDSA_ED25519_SHA512")
+            EdDSAEngine()
+        else
+            Signature.getInstance(signatureScheme.sigSchemeName, signatureScheme.providerName)
+        signature.initVerify(publicKey)
+        signature.update(clearData)
+        return signature.verify(signatureData)
     }
 
     /**

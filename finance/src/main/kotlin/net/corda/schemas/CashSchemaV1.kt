@@ -19,7 +19,7 @@ object CashSchemaV1 : MappedSchema(schemaFamily = CashSchema.javaClass, version 
     @Entity
     @Table(name = "cash_states")
     class PersistentCashState(
-            @Column(name = "owner_key")
+            @Column(name = "owner_key", length = 1600)
             var owner: String,
 
             @Column(name = "pennies")
@@ -28,7 +28,7 @@ object CashSchemaV1 : MappedSchema(schemaFamily = CashSchema.javaClass, version 
             @Column(name = "ccy_code", length = 3)
             var currency: String,
 
-            @Column(name = "issuer_key")
+            @Column(name = "issuer_key", length = 1600)
             var issuerParty: String,
 
             @Column(name = "issuer_ref")

@@ -17,6 +17,7 @@ import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.i2p.crypto.eddsa.EdDSAPublicKey
+import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PublicKey
 import java.math.BigDecimal
 import java.security.PublicKey
 import java.util.*
@@ -66,8 +67,8 @@ object JacksonSupport {
             addDeserializer(BusinessCalendar::class.java, CalendarDeserializer)
 
             // For ed25519 pubkeys
-            addSerializer(EdDSAPublicKey::class.java, PublicKeySerializer)
-            addDeserializer(EdDSAPublicKey::class.java, PublicKeyDeserializer)
+            addSerializer(EdDSAPublicKey::class.java, Ed25519PublicKeySerializer)
+            addDeserializer(EdDSAPublicKey::class.java, Ed25519PublicKeyDeserializer)
 
             // For composite keys
             addSerializer(CompositeKey::class.java, CompositeKeySerializer)
@@ -85,6 +86,10 @@ object JacksonSupport {
             // For OpaqueBytes
             addDeserializer(OpaqueBytes::class.java, OpaqueBytesDeserializer)
             addSerializer(OpaqueBytes::class.java, OpaqueBytesSerializer)
+
+            // For PublicKey
+            addSerializer(PublicKey::class.java, PublicKeySerializer)
+            addDeserializer(PublicKey::class.java, PublicKeyDeserializer)
         }
     }
 
@@ -205,17 +210,33 @@ object JacksonSupport {
         }
     }
 
-    object PublicKeySerializer : JsonSerializer<EdDSAPublicKey>() {
+    object Ed25519PublicKeySerializer : JsonSerializer<EdDSAPublicKey>() {
         override fun serialize(obj: EdDSAPublicKey, generator: JsonGenerator, provider: SerializerProvider) {
             check(obj.params == ed25519Curve)
             generator.writeString(obj.toBase58String())
         }
     }
 
-    object PublicKeyDeserializer : JsonDeserializer<EdDSAPublicKey>() {
+    object Ed25519PublicKeyDeserializer : JsonDeserializer<EdDSAPublicKey>() {
         override fun deserialize(parser: JsonParser, context: DeserializationContext): EdDSAPublicKey {
             return try {
                 parsePublicKeyBase58(parser.text) as EdDSAPublicKey
+            } catch (e: Exception) {
+                throw JsonParseException(parser, "Invalid public key ${parser.text}: ${e.message}")
+            }
+        }
+    }
+
+    object PublicKeySerializer : JsonSerializer<PublicKey>() {
+        override fun serialize(obj: PublicKey, generator: JsonGenerator, provider: SerializerProvider) {
+            generator.writeBinary(obj.encoded)
+        }
+    }
+
+    object PublicKeyDeserializer : JsonDeserializer<PublicKey>() {
+        override fun deserialize(parser: JsonParser, context: DeserializationContext): PublicKey {
+            return try {
+                return Crypto.decodePublicKey(parser.text.toByteArray())
             } catch (e: Exception) {
                 throw JsonParseException(parser, "Invalid public key ${parser.text}: ${e.message}")
             }

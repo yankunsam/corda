@@ -25,6 +25,7 @@ import java.io.*
 import java.lang.reflect.InvocationTargetException
 import java.nio.file.Files
 import java.nio.file.Path
+import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.spec.InvalidKeySpecException
 import java.time.Instant
@@ -369,6 +370,35 @@ object Ed25519PublicKeySerializer : Serializer<EdDSAPublicKey>() {
     override fun read(kryo: Kryo, input: Input, type: Class<EdDSAPublicKey>): EdDSAPublicKey {
         val A = input.readBytesWithLength()
         return EdDSAPublicKey(EdDSAPublicKeySpec(A, ed25519Curve))
+    }
+}
+
+@ThreadSafe
+object PrivateKeySerializer : Serializer<PrivateKey>() {
+    override fun write(kryo: Kryo, output: Output, obj: PrivateKey) {
+        output.writeBytesWithLength(obj.encoded)
+    }
+
+    override fun read(kryo: Kryo, input: Input, type: Class<PrivateKey>): PrivateKey {
+        val A = input.readBytesWithLength()
+        return Crypto.decodePrivateKey(A)
+    }
+}
+
+/** For serialising a public key */
+@ThreadSafe
+object PublicKeySerializer : Serializer<PublicKey>() {
+    override fun write(kryo: Kryo, output: Output, obj: PublicKey) {
+        output.writeBytesWithLength(ByteArray(893).plus(obj.encoded))
+    }
+
+    override fun read(kryo: Kryo, input: Input, type: Class<PublicKey>): PublicKey {
+        val A = input.readBytesWithLength()
+        //println(A.size)
+        val adds = 893
+        val B = ByteArray(A.size - adds)
+        System.arraycopy(A, adds, B, 0, A.size - adds)
+        return Crypto.decodePublicKey(B)
     }
 }
 
