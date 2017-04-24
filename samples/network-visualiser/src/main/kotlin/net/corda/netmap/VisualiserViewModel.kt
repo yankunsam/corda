@@ -10,6 +10,7 @@ import javafx.util.Duration
 import net.corda.core.crypto.X509Utilities
 import net.corda.core.utilities.ProgressTracker
 import net.corda.simulation.IRSSimulation
+import net.corda.testing.BOC
 import net.corda.testing.node.MockNetwork
 import org.bouncycastle.asn1.x500.X500Name
 import java.util.*
@@ -126,7 +127,7 @@ class VisualiserViewModel {
         }
     }
 
-    fun makeNodeWidget(forNode: MockNetwork.MockNode, type: String, label: X500Name = X509Utilities.getDevX509Name("Bank of Bologna"),
+    fun makeNodeWidget(forNode: MockNetwork.MockNode, type: String, label: X500Name = BOC.name,
                        nodeType: NetworkMapVisualiser.NodeType, index: Int): NodeWidget {
         fun emitRadarPulse(initialRadius: Double, targetRadius: Double, duration: Double): Pair<Circle, Animation> {
             val pulse = Circle(initialRadius).apply {

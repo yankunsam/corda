@@ -56,7 +56,7 @@ class P2PMessagingTest : NodeBasedTest() {
     // TODO Use a dummy distributed service
     @Test
     fun `communicating with a distributed service which the network map node is part of`() {
-        val serviceName = X509Utilities.getDevX509Name("DistributedService")
+        val serviceName = X500Name("CN=DistributedService,OU=Corda QA Department,O=R3 CEV,L=New York,C=US")
 
         val root = tempFolder.root.toPath()
         ServiceIdentityGenerator.generateToDisk(
@@ -72,7 +72,7 @@ class P2PMessagingTest : NodeBasedTest() {
                 configOverrides = mapOf("notaryNodeAddress" to notaryClusterAddress.toString()))
         val (serviceNode2, alice) = Futures.allAsList(
                 startNode(
-                        "Service Node 2",
+                        X500Name("CN=Service Node 2,OU=Corda QA Department,O=R3 CEV,L=New York,C=US"),
                         advertisedServices = setOf(distributedService),
                         configOverrides = mapOf(
                                 "notaryNodeAddress" to freeLocalHostAndPort().toString(),
@@ -85,7 +85,7 @@ class P2PMessagingTest : NodeBasedTest() {
 
     @Test
     fun `communicating with a distributed service which we're part of`() {
-        val serviceName = X500Name("CN=Distributed Service,O=R3,OU=corda,L=London,C=UK")
+        val serviceName = X500Name("CN=Distributed Service,OU=Corda QA Department,O=R3 CEV,L=New York,C=US")
         val distributedService = startNotaryCluster(serviceName, 2).getOrThrow()
         assertAllNodesAreUsed(distributedService, serviceName, distributedService[0])
     }

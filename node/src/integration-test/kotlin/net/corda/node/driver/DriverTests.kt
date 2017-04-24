@@ -13,6 +13,7 @@ import net.corda.node.services.api.RegulatorService
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.ArtemisMessagingComponent
 import org.assertj.core.api.Assertions.assertThat
+import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Test
 import java.nio.file.Paths
 import java.util.concurrent.Executors
@@ -42,7 +43,7 @@ class DriverTests {
     fun `simple node startup and shutdown`() {
         val handles = driver {
             val notary = startNode(DUMMY_NOTARY.name, setOf(ServiceInfo(SimpleNotaryService.type)))
-            val regulator = startNode("CN=Regulator,O=R3,OU=corda,L=London,C=UK", setOf(ServiceInfo(RegulatorService.type)))
+            val regulator = startNode(X500Name("CN=Regulator,OU=Corda QA Department,O=R3 CEV,L=New York,C=US"), setOf(ServiceInfo(RegulatorService.type)))
             listOf(nodeMustBeUp(notary), nodeMustBeUp(regulator))
         }
         handles.map { nodeMustBeDown(it) }

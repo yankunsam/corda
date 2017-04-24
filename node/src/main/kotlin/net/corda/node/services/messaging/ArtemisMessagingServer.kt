@@ -437,9 +437,7 @@ private class VerifyingNettyConnector(configuration: MutableMap<String, Any>?,
                                       protocolManager: ClientProtocolManager?) :
         NettyConnector(configuration, handler, listener, closeExecutor, threadPool, scheduledThreadPool, protocolManager) {
     private val server = configuration?.get(ArtemisMessagingServer::class.java.name) as? ArtemisMessagingServer
-    private val expectedCommonName: X500Name? = configuration?.get(ArtemisTcpTransport.VERIFY_PEER_COMMON_NAME)?.let { it ->
-        X500Name(it as String)
-    }
+    private val expectedCommonName: X500Name? = configuration?.get(ArtemisTcpTransport.VERIFY_PEER_COMMON_NAME) as X500Name?
 
     override fun createConnection(): Connection? {
         val connection = super.createConnection() as NettyConnection?

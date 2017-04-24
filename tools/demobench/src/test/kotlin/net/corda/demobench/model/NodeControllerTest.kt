@@ -13,8 +13,8 @@ class NodeControllerTest {
 
     private val baseDir: Path = Paths.get(".").toAbsolutePath()
     private val controller = NodeController({ _, _ -> })
-    private val node1Name = X509Utilities.getDevX509Name("Node 1")
-    private val node2Name = X509Utilities.getDevX509Name("Node 2")
+    private val node1Name = X500Name("CN=Node 1,OU=Corda QA Department,O=R3 CEV,L=New York,C=US")
+    private val node2Name = X500Name("CN=Node 2,OU=Corda QA Department,O=R3 CEV,L=New York,C=US")
 
     @Test
     fun `test unique nodes after validate`() {
@@ -90,7 +90,7 @@ class NodeControllerTest {
 
     @Test
     fun `test register network map node`() {
-        val config = createConfig(legalName = X509Utilities.getDevX509Name("Node is Network Map"))
+        val config = createConfig(legalName = X500Name("CN=Node is Network Map,OU=Corda QA Department,O=R3 CEV,L=New York,C=US"))
         assertTrue(config.isNetworkMap())
 
         assertFalse(controller.hasNetworkMap())
@@ -100,7 +100,7 @@ class NodeControllerTest {
 
     @Test
     fun `test register non-network-map node`() {
-        val config = createConfig(legalName = X509Utilities.getDevX509Name("Node is not Network Map"))
+        val config = createConfig(legalName = X500Name("CN=Node is not Network Map,OU=Corda QA Department,O=R3 CEV,L=New York,C=US"))
         config.networkMap = NetworkMapConfig(DUMMY_NOTARY.name, 10000)
         assertFalse(config.isNetworkMap())
 
@@ -155,7 +155,7 @@ class NodeControllerTest {
 
     @Test
     fun `dispose node`() {
-        val config = createConfig(legalName = X509Utilities.getDevX509Name("MyName"))
+        val config = createConfig(legalName = X500Name("CN=MyName,OU=Corda QA Department,O=R3 CEV,L=New York,C=US"))
         controller.register(config)
 
         assertEquals(NodeState.STARTING, config.state)
@@ -166,7 +166,7 @@ class NodeControllerTest {
     }
 
     private fun createConfig(
-            legalName: X500Name = X509Utilities.getDevX509Name("Unknown"),
+            legalName: X500Name = X500Name("CN=Unknown,OU=Corda QA Department,O=R3 CEV,L=New York,C=US"),
             nearestCity: String = "Nowhere",
             p2pPort: Int = -1,
             rpcPort: Int = -1,

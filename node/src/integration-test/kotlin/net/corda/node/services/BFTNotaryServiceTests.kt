@@ -1,5 +1,6 @@
 package net.corda.node.services
 
+import net.corda.core.div
 import net.corda.core.contracts.DummyContract
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef

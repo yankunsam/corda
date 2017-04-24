@@ -29,7 +29,7 @@ import java.io.StringWriter
 class NodeConfigTest {
 
     private val baseDir: Path = Paths.get(".").toAbsolutePath()
-    private val myLegalName = X509Utilities.getDevX509Name("My Name")
+    private val myLegalName = X500Name("CN=My Name,OU=Corda QA Department,O=R3 CEV,L=New York,C=US")
 
     @Test
     fun `test name`() {
@@ -266,7 +266,7 @@ class NodeConfigTest {
     }
 
     private fun createConfig(
-            legalName: X500Name = X509Utilities.getDevX509Name("Unknown"),
+            legalName: X500Name = X500Name("CN=Unknown,O=R3,OU=corda,L=Nowhere,C=UK"),
             nearestCity: String = "Nowhere",
             p2pPort: Int = -1,
             rpcPort: Int = -1,

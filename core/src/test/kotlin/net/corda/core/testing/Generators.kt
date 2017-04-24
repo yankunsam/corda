@@ -147,6 +147,6 @@ class X500NameGenerator : Generator<X500Name>(X500Name::class.java) {
         for (word in 0..wordCount) {
             appendProperNoun(cn, random, status).append(" ")
         }
-        return X509Utilities.getDevX509Name(cn.trim().toString())
+        return X500Name("CN=${cn.trim()},OU=Corda QA Department,O=R3 CEV,L=New York,C=US")
     }
 }

@@ -33,6 +33,8 @@ import net.corda.nodeapi.config.parseAs
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.bouncycastle.asn1.x500.X500Name
+import org.bouncycastle.asn1.x500.X500NameBuilder
+import org.bouncycastle.asn1.x500.style.BCStyle
 import org.slf4j.Logger
 import java.io.File
 import java.net.*
@@ -429,7 +431,7 @@ class DriverDSL(
         val rpcAddress = portAllocation.nextHostAndPort()
         val webAddress = portAllocation.nextHostAndPort()
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
-        val name = providedName ?: X509Utilities.getDevX509Name("${pickA(name)}-${p2pAddress.port}")
+        val name = providedName ?: X500Name("CN=${pickA(name)}-${p2pAddress.port},OU=Corda QA Department,O=R3 CEV,L=New York,C=US")
 
         val baseDirectory = driverDirectory / name.toString()
         val configOverrides = mapOf(
@@ -478,7 +480,17 @@ class DriverDSL(
             verifierType: VerifierType,
             rpcUsers: List<User>
     ): ListenableFuture<Pair<Party, List<NodeHandle>>> {
-        val nodeNames = (1..clusterSize).map { X509Utilities.getDevX509Name("${DUMMY_NOTARY.name} $it") }
+        val nodeNames = (1..clusterSize).map {
+            val nameBuilder = X500NameBuilder(BCStyle.INSTANCE)
+            nameBuilder.addRDN(BCStyle.CN, "${DUMMY_NOTARY.name.commonName} $it")
+            DUMMY_NOTARY.name.rdNs.forEach { rdn ->
+                if (!rdn.isMultiValued &&
+                    rdn.first.type != BCStyle.CN) {
+                    nameBuilder.addRDN(rdn.first)
+                }
+            }
+            nameBuilder.build()
+        }
         val paths = nodeNames.map { driverDirectory / it.commonName }
         ServiceIdentityGenerator.generateToDisk(paths, type.id, notaryName)
 
